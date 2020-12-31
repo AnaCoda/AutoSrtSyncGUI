@@ -7,6 +7,7 @@ Works pretty reliably for English movies, currently testing it out on French.
 I decided to publish this as a separate project from my original one because of many differences.
 
 TODO:
-- Add an option to choose how much confidence is needed in the speech recognition (currently 70%)
-- Add an option to choose the minimum number of words needed to match (currently 3 words)
-- Add an option to choose how many seconds of speech to recognize with (currently 2.5 seconds)
+- ~~Add an option to choose how much confidence is needed in the speech recognition (currently 70%)~~
+- ~~Add an option to choose the minimum number of words needed to match (currently 3 words)~~
+- ~~Add an option to choose how many seconds of speech to recognize with (currently 2.5 seconds)~~
+- Add an option to allow near matches

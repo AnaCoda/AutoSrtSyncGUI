@@ -16,11 +16,16 @@ import moviepy.editor as mp
 import json
 import re
 
+from difflib import SequenceMatcher
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
 import sys
 
 log = logging.getLogger(__name__)
 
-# Subtitle Functions
+#region Subtitle Functions
 
 def timedelta_to_milliseconds(delta):
     return delta.days * 86400000 + delta.seconds * 1000 + delta.microseconds / 1000
@@ -102,13 +107,17 @@ def auto_sub_sync(start_frac, video_file, sub_file):
     confidence = 0
     lineFound = False
     time = round(clip.audio.duration * start_frac, ndigits=2)
-    time_clip = 2.5
+    time_clip = float(values["-SR-"])
+    min_words = int(values['-words-'])
 
     subfile = open(sub_file, "r", encoding=values["-encoding-"])
     sub = subfile.read()
+    subLowerAlpha = regex.sub('', sub.lower())
+    f = open('test.txt', 'w')
+    f.write(subLowerAlpha)
     subList = list(srt.parse(sub))
 
-    while confidence < 0.7 or not lineFound:
+    while confidence*100 < int(values["-SC-"]) or not lineFound:
         lineFound = False
         audioClip = clip.audio.subclip(time, time + time_clip)
         audioClip.write_audiofile(r"audioCut.wav")
@@ -122,24 +131,30 @@ def auto_sub_sync(start_frac, video_file, sub_file):
             try:
                 confidence = result['alternative'][0]['confidence']
             except KeyError:
-                time += 2.5
+                time += time_clip
                 continue
             except TypeError:
-                time += 2.5
+                time += time_clip
                 continue
             print(confidence)
             try:
                 text = result['alternative'][0]['transcript']
             except TypeError:
-                time += 2.5
+                time += time_clip
                 continue
             
             text = regex.sub('', text.lower())
             print(text)
-            if len(text.split(' ')) > 2:
+            if subLowerAlpha.count(text) > 1:
+                time += time_clip
+                continue
+            if len(text.split(' ')) >= min_words:
                 for line in subList:
                     subText = line.content.lower()
                     subText = regex.sub('', subText)
+                    '''if similar(subText, text) > 0.6:
+                        print(text)
+                        print(subText)'''
                     if(text in subText):
                         #print("Found match")
                         print("Sub time: " + str(line.start))
@@ -151,15 +166,16 @@ def auto_sub_sync(start_frac, video_file, sub_file):
             print("Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
             print("Could not request results from Google Speech Recognition service; {0}".format(e))
-        if confidence >= 0.7 and lineFound == True:
+        if confidence*100 >= int(values["-SC-"]) and lineFound == True:
             print(line)
             print(confidence)
             lineMatch = line
         time += time_clip
     print(lineMatch)
     return [srt.timedelta_to_srt_timestamp(datetime.timedelta(seconds=(time - time_clip))), srt.timedelta_to_srt_timestamp(lineMatch.start)]
+#endregion
 
-# First the window layout in 2 columns
+#region Window Layout
 
 file_list_column = [
     [
@@ -172,8 +188,6 @@ file_list_column = [
             values=[], enable_events=True, size=(40, 20), key="-FILE LIST-"
         )
     ],
-]
-file_list_column2 = [
     [
         sg.Text("Video Folder (auto only)"),
         sg.In(size=(25, 1), enable_events=True, key="-FOLDER2-"),
@@ -185,6 +199,24 @@ file_list_column2 = [
         )
     ],
 ]
+'''file_list_column2 = [
+    [
+        sg.Text("Video Folder (auto only)"),
+        sg.In(size=(25, 1), enable_events=True, key="-FOLDER2-"),
+        sg.FolderBrowse(initial_folder="D:/Video/"),
+    ],
+    [
+        sg.Listbox(
+            values=[], enable_events=True, size=(40, 20), key="-FILE LIST2-"
+        )
+    ],
+]'''
+'''auto_settings_column = [
+    [sg.Text(text="Language: "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
+    [sg.Text(text="Speech Confidence: "), sg.InputText(key='-SC-', default_text='70')],
+    [sg.Text(text="Matching words: "), sg.DropDown(['1', '2', '3', '4', '5'], default_value='3', key='-words-')],
+    [sg.Text(text="Seconds recognized: "), sg.InputText(key='-SR-', default_text='2.5')]
+]'''
 
 if os.path.exists("savedtimes.txt"):
     fr = open("savedtimes.txt", "r")
@@ -196,30 +228,38 @@ else:
 # For now will only show the name of the file that was chosen
 srt_column = [
     [sg.Text("Choose an SRT from list on left:")],
-    [sg.Text(size=(80, 1), key="-TOUT-")],
+    [sg.Text(size=(60, 2), key="-TOUT-")],
     [sg.Button("Auto", key="-AUTO-")],
-    [sg.Text(size=(80, 1), key="-TAUTO-")],
+    [sg.Text(size=(60, 1), key="-TAUTO-")],
     [sg.Text(text="First SRT time: "), sg.InputText(key='-F1-', default_text=times_list[0])],
     [sg.Text(text="First Video time: "), sg.InputText(key='-T1-', default_text=times_list[1])],
     [sg.Text(text="Second SRT time: "), sg.InputText(key='-F2-', default_text=times_list[2])],
     [sg.Text(text="Second Video time: "), sg.InputText(key='-T2-', default_text=times_list[3])],
     [sg.Text(text="Encoding: "), sg.DropDown(['utf-8', 'latin-1'], default_value='utf-8', key='-encoding-')],
-    [sg.Text(text="Language (auto): "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
+    #[sg.Text(text="Language (auto): "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
     [sg.Button("OK", key='-SYNC-')],
-    [sg.Text(size=(80, 3), key="-TOUT2-")]
+    [sg.Text(size=(60, 3), key="-TOUT2-")],
+    [sg.Text(text="AUTO SETTINGS: ")],
+    [sg.Text(text="Language: "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
+    [sg.Text(text="Speech Confidence: "), sg.InputText(key='-SC-', default_text='70')],
+    [sg.Text(text="Matching words: "), sg.DropDown(['1', '2', '3', '4', '5'], default_value='3', key='-words-')],
+    [sg.Text(text="Seconds recognized: "), sg.InputText(key='-SR-', default_text='2.5')]
 ]
 
 # ----- Full layout -----
 layout = [
     [
         sg.Column(file_list_column),
-        sg.Column(file_list_column2),
+        #sg.Column(file_list_column2),
         sg.VSeperator(),
         sg.Column(srt_column),
+        #sg.VSeperator(),
+        #sg.Column(auto_settings_column),
     ]
 ]
 
 window = sg.Window("Srt Sync", layout)
+#endregion
 
 while True:
     event, values = window.read()
