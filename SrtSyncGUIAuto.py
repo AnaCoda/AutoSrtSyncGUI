@@ -16,8 +16,9 @@ import moviepy.editor as mp
 import json
 import re
 
-from difflib import SequenceMatcher
 
+# For similar subtitles, will be implemented soon
+from difflib import SequenceMatcher
 def similar(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
@@ -25,7 +26,7 @@ import sys
 
 log = logging.getLogger(__name__)
 
-#region Subtitle Functions
+#region Subtitle Functions from srt/srt_tools/srt-linear-timeshift
 
 def timedelta_to_milliseconds(delta):
     return delta.days * 86400000 + delta.seconds * 1000 + delta.microseconds / 1000
@@ -99,39 +100,63 @@ def linear_correct_subs(subtitles, angular, linear):
         subtitle.end = correct_timedelta(subtitle.end, angular, linear)
         yield subtitle
 
+#endregion
+
+# Open a speech recognizer
 rec = sr.Recognizer()
 def auto_sub_sync(start_frac, video_file, sub_file):
+    # For removing anything non-alphabetic
     regex = re.compile('[^a-zA-Z ]')
+
+    # Create a moviepy clip of the videofile, will be used to get audio
     clip = mp.VideoFileClip(video_file)
 
     confidence = 0
     lineFound = False
+    # The first time in the video we're going to recognize speech
     time = round(clip.audio.duration * start_frac, ndigits=2)
+    # How many seconds of audio we're going to recognize
     time_clip = float(values["-SR-"])
+    # Minimum words needed to classify as a match
     min_words = int(values['-words-'])
 
     try:
+        # Read the subtitle file into a string
         subfile = open(sub_file, "r", encoding=values["-encoding-"])
         sub = subfile.read()
     except UnicodeDecodeError:
+        window["-TOUT2-"].update("Try a different encoding\n" + str(e))
         pass
+
+    # Make a string of the subtitles with only lowercase alphabetic characters
+    # This is used to check if there are multiple matches for the recognized speech
     subLowerAlpha = regex.sub('', sub.lower())
-    f = open('test.txt', 'w')
-    f.write(subLowerAlpha)
+    '''f = open('test.txt', 'w')
+    f.write(subLowerAlpha)'''
+
+    # Use the SRT library to parse the string into sub classes
     subList = list(srt.parse(sub))
 
+    # While we haven't found a high-confidence match with subtitles
     while confidence*100 < int(values["-SC-"]) or not lineFound:
         lineFound = False
+
+        # Make a time_clip long audio clip from the video file
         audioClip = clip.audio.subclip(time, time + time_clip)
+        # Write it to a file and give it to the speech recognizer
         audioClip.write_audiofile(r"audioCut.wav")
         audio = sr.AudioFile("audioCut.wav")
+
         with audio as source:
+            # Read the audio
             recAudio = rec.record(source)
         try:
+            # Try to recognize speech
             result = rec.recognize_google(recAudio, language=values["-language-"], show_all=True)
             print(result)
             print(str(datetime.timedelta(seconds=(time))))
             try:
+                # Get the confidence that the recognition is correct
                 confidence = result['alternative'][0]['confidence']
             except KeyError:
                 time += time_clip
@@ -141,28 +166,32 @@ def auto_sub_sync(start_frac, video_file, sub_file):
                 continue
             print(confidence)
             try:
+                # Get the text for the speech recognized
                 text = result['alternative'][0]['transcript']
             except TypeError:
                 time += time_clip
                 continue
             
+            # Make all the text lowercase, and remove anything non-alphabetic
             text = regex.sub('', text.lower())
             print(text)
+
+            # Go to the next iteration if there are multiple matches in the subtitle file
             if subLowerAlpha.count(text) > 1:
                 time += time_clip
                 continue
+            # Only check for a match if it meets the minimum amount of words
             if len(text.split(' ')) >= min_words:
+                # Check against each subtitle line
                 for line in subList:
+                    # Make sublines lowercase and alphabetic
                     subText = line.content.lower()
                     subText = regex.sub('', subText)
-                    '''if similar(subText, text) > 0.6:
-                        print(text)
-                        print(subText)'''
+                    # If we found a match in a subtitle line
                     if(text in subText):
-                        #print("Found match")
                         print("Sub time: " + str(line.start))
-                        #print(text)
-                        #print(subText)
+                        # Check the fraction of where the recognized text starts in the subtitle line
+                        # This is done to correct for time if the recognized speech is not at the beginning of the subtitle
                         indFrac = (subText.index(text))/len(subText)
                         lineFound = True
                         break
@@ -170,16 +199,17 @@ def auto_sub_sync(start_frac, video_file, sub_file):
             print("Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
             print("Could not request results from Google Speech Recognition service; {0}".format(e))
+        # We found a match
         if confidence*100 >= int(values["-SC-"]) and lineFound == True:
             print(line)
             print(confidence)
             lineMatch = line
         time += time_clip
     print(lineMatch)
-    #subTime = srt.timedelta_to_srt_timestamp(lineMatch.start) + srt.timedelta_to_srt_timestamp((lineMatch.end - lineMatch.start) * indFrac)
+    # Get the correct subtime based on the indFrac we found earlier
     subTime = srt.timedelta_to_srt_timestamp(lineMatch.start + ((lineMatch.end - lineMatch.start) * indFrac))
     return [srt.timedelta_to_srt_timestamp(datetime.timedelta(seconds=(time - time_clip))), subTime]
-#endregion
+
 
 #region Window Layout
 
@@ -205,25 +235,8 @@ file_list_column = [
         )
     ],
 ]
-'''file_list_column2 = [
-    [
-        sg.Text("Video Folder (auto only)"),
-        sg.In(size=(25, 1), enable_events=True, key="-FOLDER2-"),
-        sg.FolderBrowse(initial_folder="D:/Video/"),
-    ],
-    [
-        sg.Listbox(
-            values=[], enable_events=True, size=(40, 20), key="-FILE LIST2-"
-        )
-    ],
-]'''
-'''auto_settings_column = [
-    [sg.Text(text="Language: "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
-    [sg.Text(text="Speech Confidence: "), sg.InputText(key='-SC-', default_text='70')],
-    [sg.Text(text="Matching words: "), sg.DropDown(['1', '2', '3', '4', '5'], default_value='3', key='-words-')],
-    [sg.Text(text="Seconds recognized: "), sg.InputText(key='-SR-', default_text='2.5')]
-]'''
 
+# Open previously used times for a subtitle sync
 if os.path.exists("savedtimes.txt"):
     fr = open("savedtimes.txt", "r")
     times_list = fr.read().split('\n')
@@ -231,21 +244,21 @@ if os.path.exists("savedtimes.txt"):
 else:
     times_list = ['00:00:00,000', '00:00:00,000', '00:00:00,000', '00:00:00,000']
 
-# For now will only show the name of the file that was chosen
+# Input part
 srt_column = [
     [sg.Text("Choose an SRT from list on left:")],
     [sg.Text(size=(60, 2), key="-TOUT-")],
-    [sg.Button("Auto", key="-AUTO-")],
     [sg.Text(size=(60, 1), key="-TAUTO-")],
     [sg.Text(text="First SRT time: "), sg.InputText(key='-F1-', default_text=times_list[0])],
     [sg.Text(text="First Video time: "), sg.InputText(key='-T1-', default_text=times_list[1])],
     [sg.Text(text="Second SRT time: "), sg.InputText(key='-F2-', default_text=times_list[2])],
     [sg.Text(text="Second Video time: "), sg.InputText(key='-T2-', default_text=times_list[3])],
     [sg.Text(text="Encoding: "), sg.DropDown(['utf-8', 'latin-1'], default_value='utf-8', key='-encoding-')],
-    #[sg.Text(text="Language (auto): "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
     [sg.Button("OK", key='-SYNC-')],
     [sg.Text(size=(60, 3), key="-TOUT2-")],
-    [sg.Text(text="AUTO SETTINGS: ")],
+    [sg.Text(text="AUTO: ")],
+    [sg.Button("Auto", key="-AUTO-")],
+    [sg.Text(size=(60, 2), key="-TOUT3-")],
     [sg.Text(text="Language: "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
     [sg.Text(text="Speech Confidence: "), sg.InputText(key='-SC-', default_text='70')],
     [sg.Text(text="Matching words: "), sg.DropDown(['1', '2', '3', '4', '5'], default_value='3', key='-words-')],
@@ -256,11 +269,8 @@ srt_column = [
 layout = [
     [
         sg.Column(file_list_column),
-        #sg.Column(file_list_column2),
         sg.VSeperator(),
         sg.Column(srt_column),
-        #sg.VSeperator(),
-        #sg.Column(auto_settings_column),
     ]
 ]
 
@@ -271,6 +281,7 @@ while True:
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
+    #region UI control
     # Folder name was filled in, make a list of files in the folder
     if event == "-FOLDER-":
         folder = values["-FOLDER-"]
@@ -314,27 +325,29 @@ while True:
             filenamev = os.path.join(
                 values["-FOLDER2-"], values["-FILE LIST2-"][0]
             )
+            window["-TOUT3-"].update(filenamev)
         except:
             pass
+    #endregion
     elif event == "-SYNC-":
-        # window["-TOUT2-"].update(values["-F1-"])
+        # Simulating arguments to use functions from the SRT lineartimeshift library
         sys.argv = ["SrtSyncGUI.py", "--input", filename, "--f1", values["-F1-"], "--f2", values["-F2-"], "--t1", values["-T1-"],
                     "--t2",  values["-T2-"], "--output", filename.replace('.srt', '_c.srt'), "--encoding", values["-encoding-"]]
         
         print(sys.argv)
         args = parse_args()
 
+        # Save times entered by the user, very useful if the program crashes
         f = open("savedtimes.txt", "w")
         f.write(values["-F1-"] + '\n' + values["-T1-"] + '\n' + values["-F2-"] + '\n' + values["-T2-"])
         f.close()
 
+        # Calculate the correction variables
         logging.basicConfig(level=args.log_level)
         angular, linear = calc_correction(
             args.to_start, args.to_end, args.from_start, args.from_end
         )
-        '''angular, linear = calc_correction(
-            values["-T1-"], values["-T2-"], values["-F1-"], values["-F2-"]
-        )'''
+        
         try:
             srt_tools.utils.set_basic_args(args)
         except UnicodeDecodeError:
@@ -352,12 +365,16 @@ while True:
             window["-TOUT2-"].update("Try a different encoding\n" + str(e))
     elif event == "-AUTO-":
         window["-TAUTO-"].update("Working...")
+        # Call the auto_sub_sync function to get the auto times for 1/4 into the video file
         btime1, btime2 = auto_sub_sync(1/4, filenamev, filename)
+
+        # Update the UI with the correct values
         window.FindElement('-T1-').Update(btime1)
         window.FindElement('-F1-').Update(btime2)
         values["-T1-"] = btime1
         values["-F1-"] = btime2
 
+        # Do the same but 3/4 into the video file
         etime1, etime2 = auto_sub_sync(3/4, filenamev, filename)
         window.FindElement('-T2-').Update(etime1)
         window.FindElement('-F2-').Update(etime2)
@@ -365,6 +382,7 @@ while True:
         values["-F2-"] = etime2
         window["-TAUTO-"].update("Done.")
 
+        # Set parameters so we can sync (just like in the SYNC event)
         sys.argv = ["SrtSyncGUI.py", "--input", filename, "--f1", values["-F1-"], "--f2", values["-F2-"], "--t1", values["-T1-"],
                     "--t2",  values["-T2-"], "--output", filename.replace('.srt', '_autosync.srt'), "--encoding", values["-encoding-"]]
         
@@ -380,9 +398,7 @@ while True:
         angular, linear = calc_correction(
             args.to_start, args.to_end, args.from_start, args.from_end
         )
-        '''angular, linear = calc_correction(
-            values["-T1-"], values["-T2-"], values["-F1-"], values["-F2-"]
-        )'''
+
         srt_tools.utils.set_basic_args(args)
         try:
             corrected_subs = linear_correct_subs(args.input, angular, linear)
@@ -395,56 +411,7 @@ while True:
             window["-TOUT2-"].update("Success!")
         except Exception as e:
             window["-TOUT2-"].update("Try a different encoding\n" + str(e))
-        '''time_clip = 2.5
-        regex = re.compile('[^a-zA-Z ]')
-        clip = mp.VideoFileClip(filenamev)
-        rec = sr.Recognizer()
-
-        confidence = 0
-        lineFound = False
-        time = round(clip.audio.duration/4)
-
-        subfile = open(filename, "r", encoding=values["-encoding-"])
-        sub = subfile.read()
-        subList = list(srt.parse(sub))
-
-        while confidence < 0.8 or not lineFound:
-            audioClip = clip.audio.subclip(time, time + time_clip)
-            audioClip.write_audiofile(r"audioCut.wav")
-            audio = sr.AudioFile("audioCut.wav")
-            with audio as source:
-                recAudio = rec.record(source)
-            try:
-                result = rec.recognize_google(recAudio, language="en-GB", show_all=True)
-                try:
-                    confidence = result['alternative'][0]['confidence']
-                except KeyError:
-                    pass
-                except TypeError:
-                    pass
-                #print(confidence)
-                try:
-                    text = result['alternative'][0]['transcript']
-                except TypeError:
-                    pass
-                text = regex.sub('', text.lower())
-                for line in subList:
-                    subText = line.content.lower()
-                    subText = regex.sub('', subText)
-                    if(text in subText):
-                        #print("Found match")
-                        print("Sub time: " + str(line.start))
-                        lineFound = True
-                        break
-                        
-            except sr.UnknownValueError:
-                print("Google Speech Recognition could not understand audio")
-            except sr.RequestError as e:
-                print("Could not request results from Google Speech Recognition service; {0}".format(e))
-            time += time_clip
-        window.FindElement('-T1-').Update(srt.timedelta_to_srt_timestamp(datetime.timedelta(seconds=(time - time_clip))))
-        window.FindElement('-F1-').Update(srt.timedelta_to_srt_timestamp(line.start))'''
-
+        
         window["-TAUTO-"].update("Done.")
             
         
