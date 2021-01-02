@@ -1,10 +1,17 @@
 # AutoSrtSyncGUI
-A version of my SrtSyncGUI program that will sync SRT subtitles automatically using Google speech recognition.
-Takes some time (a few minutes, but can be less), but you don't need to find the subtitle and movie times yourself making it much more convenient
-This is heavier than the other version as it uses the MoviePy and SpeechRecognition libraries.
 
-Works pretty reliably for English movies, currently testing it out on French.
-I decided to publish this as a separate project from my original one because of many differences.
+A Python program with a GUI to automatically sync subtitles with the wrong framerate by comparing speech in the movie to text in the subtitles. If your SRT subtitles keep getting out of sync with audio/video (a single shift doesn't work for long), this is the tool for you.
+
+This will sync SRT subtitles automatically using Google speech recognition.
+Takes some time (really depends on the video, can be from seconds to minutes), but you don't need to find the subtitle and movie times yourself making it much more convenient.
+
+Works pretty reliably for English movies, and I've tested it on some French movies as well.
+NOTE: only works for subtitles that are in the same language as the video right now
+
+Most important libraries used:
+- srt/srt_tools for parsing .srt subtitle files
+- speech_recognition for interface with Google speech recognition API
+- moviepy for cutting short audio clips from a video
 
 TODO:
 - ~~Add an option to choose how much confidence is needed in the speech recognition (currently 70%)~~
