@@ -110,8 +110,11 @@ def auto_sub_sync(start_frac, video_file, sub_file):
     time_clip = float(values["-SR-"])
     min_words = int(values['-words-'])
 
-    subfile = open(sub_file, "r", encoding=values["-encoding-"])
-    sub = subfile.read()
+    try:
+        subfile = open(sub_file, "r", encoding=values["-encoding-"])
+        sub = subfile.read()
+    except UnicodeDecodeError:
+        pass
     subLowerAlpha = regex.sub('', sub.lower())
     f = open('test.txt', 'w')
     f.write(subLowerAlpha)
@@ -160,6 +163,7 @@ def auto_sub_sync(start_frac, video_file, sub_file):
                         print("Sub time: " + str(line.start))
                         #print(text)
                         #print(subText)
+                        indFrac = (subText.index(text))/len(subText)
                         lineFound = True
                         break
         except sr.UnknownValueError:
@@ -172,7 +176,9 @@ def auto_sub_sync(start_frac, video_file, sub_file):
             lineMatch = line
         time += time_clip
     print(lineMatch)
-    return [srt.timedelta_to_srt_timestamp(datetime.timedelta(seconds=(time - time_clip))), srt.timedelta_to_srt_timestamp(lineMatch.start)]
+    #subTime = srt.timedelta_to_srt_timestamp(lineMatch.start) + srt.timedelta_to_srt_timestamp((lineMatch.end - lineMatch.start) * indFrac)
+    subTime = srt.timedelta_to_srt_timestamp(lineMatch.start + ((lineMatch.end - lineMatch.start) * indFrac))
+    return [srt.timedelta_to_srt_timestamp(datetime.timedelta(seconds=(time - time_clip))), subTime]
 #endregion
 
 #region Window Layout
@@ -329,7 +335,10 @@ while True:
         '''angular, linear = calc_correction(
             values["-T1-"], values["-T2-"], values["-F1-"], values["-F2-"]
         )'''
-        srt_tools.utils.set_basic_args(args)
+        try:
+            srt_tools.utils.set_basic_args(args)
+        except UnicodeDecodeError:
+            window["-TOUT2-"].update("Try a different encoding\n" + str(e))
         try:
             corrected_subs = linear_correct_subs(args.input, angular, linear)
             output = srt_tools.utils.compose_suggest_on_fail(corrected_subs, strict=args.strict)
