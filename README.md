@@ -13,6 +13,15 @@ Most important libraries used:
 - speech_recognition for interface with Google speech recognition API
 - moviepy for cutting short audio clips from a video
 
+HOW TO USE:
+- Pip install dependencies (srt, PySimpleGUI, speech_recognition, srt_tools, moviepy)
+- Run program
+- Select SRT file and the video you want to sync it to
+- Choose settings (encoding, auto sync options)
+- Press Auto and wait until complete
+If you get an encoding error, try another encoding from the dropdown and press OK.
+You can also edit the generated times manually and press OK to resync.
+
 TODO:
 - ~~Add an option to choose how much confidence is needed in the speech recognition (currently 70%)~~
 - ~~Add an option to choose the minimum number of words needed to match (currently 3 words)~~
