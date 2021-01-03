@@ -22,11 +22,11 @@ TODO:
 
 Images:
 
-**Initial GUI**
+**Initial GUI**<br>
 <img src="ExamplePics/OpeningScreen.jpg" width="700"><br>
-**Files Selected**
+**Files Selected**<br>
 <img src="ExamplePics/SelectedFiles.jpg" width="700"><br>
-**Sync Completed**
+**Sync Completed**<br>
 <img src="ExamplePics/CompletedSync.jpg" width="700"><br>
-**Files Created**
+**Files Created**<br>
 <img src="ExamplePics/EndResult.jpg" width="700">
