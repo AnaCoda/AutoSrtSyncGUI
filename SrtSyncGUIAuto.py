@@ -106,7 +106,7 @@ def linear_correct_subs(subtitles, angular, linear):
 rec = sr.Recognizer()
 def auto_sub_sync(start_frac, video_file, sub_file):
     # For removing anything non-alphabetic
-    regex = re.compile('[^a-zA-Z ]')
+    regex = re.compile('[^a-zA-Z0-9 ]')
 
     # Create a moviepy clip of the videofile, will be used to get audio
     clip = mp.VideoFileClip(video_file)

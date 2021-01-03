@@ -18,3 +18,10 @@ TODO:
 - ~~Add an option to choose the minimum number of words needed to match (currently 3 words)~~
 - ~~Add an option to choose how many seconds of speech to recognize with (currently 2.5 seconds)~~
 - Add an option to allow near matches
+- Add GIFs of video with unsynced vs synced subs to README
+
+Images:
+![Initial GUI](ExamplePics/OpeningScreen.jpg "Initial GUI")
+![Files Selected](ExamplePics/SelectedFiles.jpg "Files Selected")
+![Sync Completed](ExamplePics/CompletedSync.jpg "Sync Completed")
+![Files Created](ExamplePics/EndResult.jpg "File Created")
