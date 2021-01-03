@@ -21,7 +21,12 @@ TODO:
 - Add GIFs of video with unsynced vs synced subs to README
 
 Images:
-![Initial GUI](ExamplePics/OpeningScreen.jpg "Initial GUI")
-![Files Selected](ExamplePics/SelectedFiles.jpg "Files Selected")
-![Sync Completed](ExamplePics/CompletedSync.jpg "Sync Completed")
-![Files Created](ExamplePics/EndResult.jpg "File Created")
+
+**Initial GUI**
+<img src="ExamplePics/OpeningScreen.jpg" width="200">
+**Files Selected**
+<img src="ExamplePics/SelectedFiles.jpg" width="200">
+**Sync Completed**
+<img src="ExamplePics/CompletedSync.jpg" width="200">
+**Files Created**
+<img src="ExamplePics/EndResult.jpg" width="200">
