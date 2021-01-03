@@ -8,6 +8,8 @@ Takes some time (really depends on the video, can be from seconds to minutes), b
 Works pretty reliably for English movies, and I've tested it on some French movies as well.
 NOTE: only works for subtitles that are in the same language as the video right now
 
+This program will not work if the video has a commercial that subtitles don't. It uses two points to do a linear sync for a difference in framerate and/or start time between the subtitles and video (the most common problems I come across)
+
 Most important libraries used:
 - srt/srt_tools for parsing .srt subtitle files
 - speech_recognition for interface with Google speech recognition API
