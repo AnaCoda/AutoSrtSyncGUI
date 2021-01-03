@@ -23,10 +23,10 @@ TODO:
 Images:
 
 **Initial GUI**
-<img src="ExamplePics/OpeningScreen.jpg" width="200">
+<img src="ExamplePics/OpeningScreen.jpg" width="700"><br>
 **Files Selected**
-<img src="ExamplePics/SelectedFiles.jpg" width="200">
+<img src="ExamplePics/SelectedFiles.jpg" width="700"><br>
 **Sync Completed**
-<img src="ExamplePics/CompletedSync.jpg" width="200">
+<img src="ExamplePics/CompletedSync.jpg" width="700"><br>
 **Files Created**
-<img src="ExamplePics/EndResult.jpg" width="200">
+<img src="ExamplePics/EndResult.jpg" width="700">
