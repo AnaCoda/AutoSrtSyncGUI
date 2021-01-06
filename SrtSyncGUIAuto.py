@@ -16,7 +16,6 @@ import moviepy.editor as mp
 import json
 import re
 
-
 # For similar subtitles, will be implemented soon
 from difflib import SequenceMatcher
 def similar(a, b):
@@ -125,12 +124,13 @@ def auto_sub_sync(start_frac, video_file, sub_file):
         subfile = open(sub_file, "r", encoding=values["-encoding-"])
         sub = subfile.read()
     except UnicodeDecodeError:
-        window["-TOUT2-"].update("Try a different encoding\n" + str(e))
+        window["-TOUT2-"].update("Try a different encoding\n")
         pass
 
     # Make a string of the subtitles with only lowercase alphabetic characters
     # This is used to check if there are multiple matches for the recognized speech
     subLowerAlpha = regex.sub('', sub.lower())
+    subLowerAlpha = subLowerAlpha.replace(' ', '')
     '''f = open('test.txt', 'w')
     f.write(subLowerAlpha)'''
 
@@ -176,25 +176,50 @@ def auto_sub_sync(start_frac, video_file, sub_file):
             text = regex.sub('', text.lower())
             print(text)
 
-            # Go to the next iteration if there are multiple matches in the subtitle file
-            if subLowerAlpha.count(text) > 1:
+            # Go to the next iteration if there are multiple matches in the subtitle file or if there are none
+            matchCount = subLowerAlpha.count(text.replace(' ', ''))
+            if matchCount > 1:
+                time += time_clip
+                continue
+            # Without substring matches, we can simply skip if the string is not in the subtitle file.
+            if (values['-MSUB-'] == False) and matchCount == 0:
                 time += time_clip
                 continue
             # Only check for a match if it meets the minimum amount of words
-            if len(text.split(' ')) >= min_words:
+            if len(text.split()) >= min_words:
                 # Check against each subtitle line
                 for line in subList:
                     # Make sublines lowercase and alphabetic
                     subText = line.content.lower()
                     subText = regex.sub('', subText)
                     # If we found a match in a subtitle line
-                    if(text in subText):
-                        print("Sub time: " + str(line.start))
-                        # Check the fraction of where the recognized text starts in the subtitle line
-                        # This is done to correct for time if the recognized speech is not at the beginning of the subtitle
-                        indFrac = (subText.index(text))/len(subText)
-                        lineFound = True
-                        break
+                    if values['-MSUB-'] == False:
+                        if(text in subText):
+                            print("Sub time: " + str(line.start))
+                            # Check the fraction of where the recognized text starts in the subtitle line
+                            # This is done to correct for time if the recognized speech is not at the beginning of the subtitle
+                            indFrac = (subText.index(text))/len(subText)
+                            indFrac2 = 0
+                            lineFound = True
+                            break
+                    else:
+                        match = SequenceMatcher(None, text, subText).find_longest_match(0, len(text), 0, len(subText))
+                        matchStr = text[match.a: match.a + match.size]
+                        # Make sure this substring only occurs once in the subtitles
+                        if subLowerAlpha.count(matchStr.replace(' ', '')) > 1:
+                            continue
+                        if len(matchStr.split()) >= min_words:
+                            print("Sub time: " + str(line.start))
+                            # Check the fraction of where the recognized text starts in the subtitle line
+                            # This is done to correct for time if the recognized speech is not at the beginning of the subtitle
+                            indFrac = (subText.index(matchStr))/len(subText)
+                            indFrac2 = (text.index(matchStr))/len(text)
+                            lineFound = True
+                            print(matchStr)
+                            print(text)
+                            print(subText)
+                            break
+
         except sr.UnknownValueError:
             print("Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
@@ -207,7 +232,7 @@ def auto_sub_sync(start_frac, video_file, sub_file):
         time += time_clip
     print(lineMatch)
     # Get the correct subtime based on the indFrac we found earlier
-    subTime = srt.timedelta_to_srt_timestamp(lineMatch.start + ((lineMatch.end - lineMatch.start) * indFrac))
+    subTime = srt.timedelta_to_srt_timestamp(lineMatch.start + ((lineMatch.end - lineMatch.start) * indFrac) - ((lineMatch.end - lineMatch.start) * indFrac2))
     return [srt.timedelta_to_srt_timestamp(datetime.timedelta(seconds=(time - time_clip))), subTime]
 
 
@@ -221,7 +246,7 @@ file_list_column = [
     ],
     [
         sg.Listbox(
-            values=[], enable_events=True, size=(40, 20), key="-FILE LIST-"
+            values=[], enable_events=True, size=(40, 10), key="-FILE LIST-"
         )
     ],
     [
@@ -231,7 +256,7 @@ file_list_column = [
     ],
     [
         sg.Listbox(
-            values=[], enable_events=True, size=(40, 20), key="-FILE LIST2-"
+            values=[], enable_events=True, size=(40, 10), key="-FILE LIST2-"
         )
     ],
 ]
@@ -261,7 +286,7 @@ srt_column = [
     [sg.Text(size=(60, 2), key="-TOUT3-")],
     [sg.Text(text="Language: "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
     [sg.Text(text="Speech Confidence: "), sg.InputText(key='-SC-', default_text='70')],
-    [sg.Text(text="Matching words: "), sg.DropDown(['1', '2', '3', '4', '5'], default_value='3', key='-words-')],
+    [sg.Text(text="Minimum words to match: "), sg.DropDown(['1', '2', '3', '4', '5'], default_value='3', key='-words-'),sg.Checkbox('Match substrings', key='-MSUB-')],
     [sg.Text(text="Seconds recognized: "), sg.InputText(key='-SR-', default_text='2.5')]
 ]
 
@@ -351,7 +376,7 @@ while True:
         try:
             srt_tools.utils.set_basic_args(args)
         except UnicodeDecodeError:
-            window["-TOUT2-"].update("Try a different encoding\n" + str(e))
+            window["-TOUT2-"].update("Try a different encoding\n")
         try:
             corrected_subs = linear_correct_subs(args.input, angular, linear)
             output = srt_tools.utils.compose_suggest_on_fail(corrected_subs, strict=args.strict)
