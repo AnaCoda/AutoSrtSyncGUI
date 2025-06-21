@@ -272,7 +272,6 @@ else:
 srt_column = [
     [sg.Text("Choose an SRT from list on left:")],
     [sg.Text(size=(60, 2), key="-TOUT-")],
-    [sg.Text(size=(60, 1), key="-TAUTO-")],
     [sg.Text(text="First SRT time: "), sg.InputText(key='-F1-', default_text=times_list[0])],
     [sg.Text(text="First Video time: "), sg.InputText(key='-T1-', default_text=times_list[1])],
     [sg.Text(text="Second SRT time: "), sg.InputText(key='-F2-', default_text=times_list[2])],
@@ -402,20 +401,34 @@ while True:
             window["-TOUT2-"].update("Error: Subtitle file not selected.")
             continue
 
-        window["-TAUTO-"].update("Working...")
-        # Call the auto_sub_sync function to get the auto times for 1/4 into the video file
-        btime1, btime2 = auto_sub_sync(1/4, filenamev, filename)
+        window["-TOUT2-"].update("Working on auto filling times...")
+        window.refresh()
 
-        # Update the UI with the correct values
+        # Perform the auto sync in a separate thread to prevent GUI freezing
+        import threading
+
+        def auto_sync():
+            global btime1, btime2, etime1, etime2
+            btime1, btime2 = auto_sub_sync(1/4, filenamev, filename)
+            etime1, etime2 = auto_sub_sync(3/4, filenamev, filename)
+
+        auto_sync_thread = threading.Thread(target=auto_sync, daemon=True)
+        auto_sync_thread.start()
+        # Keep the GUI responsive while waiting for the thread to finish
+        while auto_sync_thread.is_alive():
+            window.read(timeout=100)
+
+        # Update the UI with the calculated values
         window['-T1-'].update(btime1)
         window['-F1-'].update(btime2)
-
-        # Do the same but 3/4 into the video file
-        etime1, etime2 = auto_sub_sync(3/4, filenamev, filename)
         window['-T2-'].update(etime1)
         window['-F2-'].update(etime2)
+        window['-TOUT2-'].update("Successfully auto filled times!")
 
-        window["-TAUTO-"].update("Done.")
+        # Save times entered by the user, very useful if the program crashes
+        f = open("savedtimes.txt", "w")
+        f.write(btime2 + '\n' + btime1 + '\n' + etime2 + '\n' + etime1)
+        f.close()
 
         # Set parameters so we can sync (just like in the SYNC event)
         sys.argv = ["SrtSyncGUI.py", "--input", filename, "--f1", values["-F1-"], "--f2", values["-F2-"], "--t1", values["-T1-"],
@@ -443,11 +456,9 @@ while True:
                 args.output.close()
             except (UnicodeEncodeError, TypeError):  # Python 2 fallback
                 args.output.write(output.encode(args.encoding))
-            window["-TOUT2-"].update("Success!")
+            window["-TOUT2-"].update("Success! Synced subtitles saved as: " + args.output.name)
         except Exception as e:
             window["-TOUT2-"].update("Try a different encoding\n" + str(e))
-        
-        window["-TAUTO-"].update("Done.")
             
         
 
