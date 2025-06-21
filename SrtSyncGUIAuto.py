@@ -240,22 +240,22 @@ def auto_sub_sync(start_frac, video_file, sub_file):
 file_list_column = [
     [
         sg.Text("Subtitle Folder"),
-        sg.In(size=(25, 1), enable_events=True, key="-FOLDER-"),
+        sg.In(size=(40, 1), enable_events=True, key="-FOLDER-"),
         sg.FolderBrowse(initial_folder="D:/Video/"),
     ],
     [
         sg.Listbox(
-            values=[], enable_events=True, size=(40, 10), key="-FILE LIST-"
+            values=[], enable_events=True, size=(70, 10), key="-FILE LIST-"
         )
     ],
     [
         sg.Text("Video Folder (auto only)"),
-        sg.In(size=(25, 1), enable_events=True, key="-FOLDER2-"),
+        sg.In(size=(40, 1), enable_events=True, key="-FOLDER2-"),
         sg.FolderBrowse(initial_folder="D:/Video/"),
     ],
     [
         sg.Listbox(
-            values=[], enable_events=True, size=(40, 10), key="-FILE LIST2-"
+            values=[], enable_events=True, size=(70, 10), key="-FILE LIST2-"
         )
     ],
 ]
@@ -337,6 +337,7 @@ while True:
             f
             for f in file_list
             if os.path.isfile(os.path.join(folder, f))
+            and not f.lower().endswith(".srt")
         ]
         window["-FILE LIST2-"].update(fnames)
     elif event == "-FILE LIST-":  # A file was chosen from the listbox
