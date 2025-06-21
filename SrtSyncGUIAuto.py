@@ -3,7 +3,7 @@
 
 from __future__ import division
 
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import os.path
 
 import srt
@@ -12,8 +12,7 @@ import srt_tools.utils
 import logging
 
 import speech_recognition as sr 
-import moviepy.editor as mp
-import json
+import moviepy as mp
 import re
 
 # For similar subtitles, will be implemented soon
@@ -142,7 +141,7 @@ def auto_sub_sync(start_frac, video_file, sub_file):
         lineFound = False
 
         # Make a time_clip long audio clip from the video file
-        audioClip = clip.audio.subclip(time, time + time_clip)
+        audioClip = clip.audio.subclipped(time, time + time_clip)
         # Write it to a file and give it to the speech recognizer
         audioClip.write_audiofile(r"audioCut.wav")
         audio = sr.AudioFile("audioCut.wav")
@@ -279,10 +278,10 @@ srt_column = [
     [sg.Text(text="Second SRT time: "), sg.InputText(key='-F2-', default_text=times_list[2])],
     [sg.Text(text="Second Video time: "), sg.InputText(key='-T2-', default_text=times_list[3])],
     [sg.Text(text="Encoding: "), sg.DropDown(['utf-8', 'latin-1'], default_value='utf-8', key='-encoding-')],
-    [sg.Button("OK", key='-SYNC-')],
+    [sg.Button("SYNC", key='-SYNC-')],
     [sg.Text(size=(60, 3), key="-TOUT2-")],
     [sg.Text(text="AUTO: ")],
-    [sg.Button("Auto", key="-AUTO-")],
+    [sg.Button("Auto Fill Times", key="-AUTO-")],
     [sg.Text(size=(60, 2), key="-TOUT3-")],
     [sg.Text(text="Language: "), sg.DropDown(['en-US', 'en-GB', 'fr-FR'], default_value='en-US', key='-language-')],
     [sg.Text(text="Speech Confidence: "), sg.InputText(key='-SC-', default_text='70')],
@@ -293,14 +292,17 @@ srt_column = [
 # ----- Full layout -----
 layout = [
     [
-        sg.Column(file_list_column),
+        sg.Column(file_list_column, vertical_alignment='top'),
         sg.VSeperator(),
-        sg.Column(srt_column),
+        sg.Column(srt_column, vertical_alignment='top'),
     ]
 ]
 
 window = sg.Window("Srt Sync", layout)
 #endregion
+
+filename = None
+filenamev = None
 
 while True:
     event, values = window.read()
@@ -355,10 +357,13 @@ while True:
             pass
     #endregion
     elif event == "-SYNC-":
+        if not filename:
+            window["-TOUT2-"].update("Error: Subtitle file not selected.")
+            continue
+
         # Simulating arguments to use functions from the SRT lineartimeshift library
         sys.argv = ["SrtSyncGUI.py", "--input", filename, "--f1", values["-F1-"], "--f2", values["-F2-"], "--t1", values["-T1-"],
                     "--t2",  values["-T2-"], "--output", filename.replace('.srt', '_c.srt'), "--encoding", values["-encoding-"]]
-        
         print(sys.argv)
         args = parse_args()
 
@@ -389,6 +394,13 @@ while True:
         except Exception as e:
             window["-TOUT2-"].update("Try a different encoding\n" + str(e))
     elif event == "-AUTO-":
+        if not filenamev:
+            window["-TOUT3-"].update("Error: Video file not selected.")
+            continue
+        if not filename:
+            window["-TOUT2-"].update("Error: Subtitle file not selected.")
+            continue
+
         window["-TAUTO-"].update("Working...")
         # Call the auto_sub_sync function to get the auto times for 1/4 into the video file
         btime1, btime2 = auto_sub_sync(1/4, filenamev, filename)
@@ -405,6 +417,7 @@ while True:
         window.FindElement('-F2-').Update(etime2)
         values["-T2-"] = etime1
         values["-F2-"] = etime2
+
         window["-TAUTO-"].update("Done.")
 
         # Set parameters so we can sync (just like in the SYNC event)
