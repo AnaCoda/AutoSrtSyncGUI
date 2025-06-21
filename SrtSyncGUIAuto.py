@@ -406,17 +406,13 @@ while True:
         btime1, btime2 = auto_sub_sync(1/4, filenamev, filename)
 
         # Update the UI with the correct values
-        window.FindElement('-T1-').Update(btime1)
-        window.FindElement('-F1-').Update(btime2)
-        values["-T1-"] = btime1
-        values["-F1-"] = btime2
+        window['-T1-'].update(btime1)
+        window['-F1-'].update(btime2)
 
         # Do the same but 3/4 into the video file
         etime1, etime2 = auto_sub_sync(3/4, filenamev, filename)
-        window.FindElement('-T2-').Update(etime1)
-        window.FindElement('-F2-').Update(etime2)
-        values["-T2-"] = etime1
-        values["-F2-"] = etime2
+        window['-T2-'].update(etime1)
+        window['-F2-'].update(etime2)
 
         window["-TAUTO-"].update("Done.")
 
