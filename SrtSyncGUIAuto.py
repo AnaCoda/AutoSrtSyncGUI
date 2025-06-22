@@ -1,3 +1,6 @@
+# SrtSyncGUIAuto.py
+# Main script for SRT synchronization GUI with auto-fill functionality.
+
 from __future__ import division
 
 import FreeSimpleGUI as sg
@@ -65,6 +68,8 @@ srt_column = [
     [sg.Text(size=(60, 3), key="-TOUT2-")],
     [sg.Text(text="AUTO: ")],
     [sg.Button("Auto Fill Times", key="-AUTO-")],
+    [sg.Text("Progress:"), sg.ProgressBar(100, orientation='h', size=(30, 20), key='-PROGRESS-', visible=False)],
+    [sg.Text(size=(60, 1), key="-PROGRESS_TEXT-", visible=False)],
     [sg.Text(size=(60, 2), key="-TOUT3-")],
     [
         sg.Text(text="Language: "),

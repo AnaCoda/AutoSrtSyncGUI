@@ -1,3 +1,6 @@
+# srt_utils.py
+# Utility functions for SRT subtitle operations
+
 from typing import Any, Tuple, Dict
 import datetime
 import srt

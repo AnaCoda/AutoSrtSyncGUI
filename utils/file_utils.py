@@ -1,3 +1,6 @@
+# file_utils.py
+# Utility functions for file operations for SRT synchronization GUI
+
 from typing import List, Optional, Tuple
 import os
 

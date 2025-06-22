@@ -1,3 +1,6 @@
+# audio_utils.py
+# Utility functions for audio processing and speech recognition for subtitle synchronization
+
 from typing import List, Tuple, Optional, Any, Dict
 import re
 import speech_recognition as sr
@@ -154,7 +157,6 @@ def auto_sub_sync(start_frac: float, video_file: str, sub_file: str, values: dic
     
     # Use the SRT library to parse the string into sub classes
     subList = list(srt.parse(sub))
-    
     # While we haven't found a high-confidence match with subtitles
     max_attempts = 50  # Prevent infinite loops
     attempts = 0
@@ -167,6 +169,12 @@ def auto_sub_sync(start_frac: float, video_file: str, sub_file: str, values: dic
         if time + time_clip > clip.audio.duration:
             print("Reached end of video without finding match")
             break
+
+        progress_percent = min(100, (time / clip.audio.duration) * 100)
+        current_time_str = str(datetime.timedelta(seconds=round(time, 1)))
+        total_time_str = str(datetime.timedelta(seconds=round(clip.audio.duration, 1)))
+        window['-PROGRESS-'].update(progress_percent)
+        window['-PROGRESS_TEXT-'].update(f"Analyzing: {current_time_str} / {total_time_str}")
 
         # Process audio clip
         recAudio = process_audio_clip(clip, time, time_clip)
@@ -200,8 +208,6 @@ def auto_sub_sync(start_frac: float, video_file: str, sub_file: str, values: dic
         
         if lineMatch is not None:
             lineFound = True
-            
-        # We found a match
         if confidence * 100 >= confidence_threshold and lineFound:
             break
             
@@ -247,16 +253,25 @@ def run_auto_sync_threaded(filenamev: str, filename: str, window: sg.Window, val
     
     def auto_sync() -> None:
         try:
+            window['-PROGRESS-'].update(visible=True)
+            window['-PROGRESS_TEXT-'].update("Starting first sync point analysis...", visible=True)
+            
             result1 = auto_sub_sync(1/4, filenamev, filename, values, window)
+            
+            window['-PROGRESS_TEXT-'].update("Starting second sync point analysis...")
+            
             result2 = auto_sub_sync(3/4, filenamev, filename, values, window)
             
             if result1 and result1[0] and result1[1] and result2 and result2[0] and result2[1]:
                 results['btime1'], results['btime2'] = result1
                 results['etime1'], results['etime2'] = result2
                 results['success'] = True
+                window['-PROGRESS-'].update(100)
+                window['-PROGRESS_TEXT-'].update("Auto sync completed successfully!")
             else:
                 results['success'] = False
                 results['error'] = "Auto sync failed to find matching subtitles"
+                window['-PROGRESS_TEXT-'].update("Auto sync failed to find matching subtitles")
         except Exception as e:
             results['success'] = False
             results['error'] = str(e)
