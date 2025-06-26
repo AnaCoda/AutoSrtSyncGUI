@@ -10,17 +10,49 @@ NOTE: only works for subtitles that are in the same language as the video right 
 
 This program will not work if the video has a commercial that subtitles don't. It uses two points to do a linear sync for a difference in framerate and/or start time between the subtitles and video (the most common problem I come across)
 
-Main libraries used:
+## Features
+
+### Single File Sync
+- Manual time input for precise control
+- Auto-fill times using speech recognition
+- Real-time progress tracking with timestamp display
+- Multiple encoding support (UTF-8, Latin-1)
+
+### Batch Sync (NEW!)
+Perfect for syncing entire TV seasons or multiple episodes at once:
+- **Simple Process**: Select folders → Multi-select files with Ctrl+Click → Switch to Batch Sync tab → Start processing
+- **Automatic Pairing**: Files are matched alphabetically (e.g., `episode01.srt` ↔ `episode01.mkv`)
+- **Progress Tracking**: See both overall batch progress and individual file analysis progress
+- **Robust Processing**: Continues even if some files fail, with detailed error reporting
+- **Consistent Naming Required**: Files should follow patterns like `S01E01.srt`/`S01E01.mkv` for best results
+
+## Main Libraries Used
 - srt/srt_tools for parsing .srt subtitle files
 - speech_recognition for interface with Google speech recognition API
 - moviepy for cutting short audio clips from a video
+- FreeSimpleGUI for the user interface
 
-HOW TO USE:
-- Pip install dependencies (srt, PySimpleGUI, speech_recognition, srt_tools, moviepy)
-- Run program
-- Select SRT file and the video you want to sync it to
-- Choose settings (encoding, auto sync options)
-- Press Auto and wait until complete
+## How to Use
+
+### Single File Sync:
+1. Pip install dependencies (srt, FreeSimpleGUI, speech_recognition, srt_tools, moviepy)
+2. Run program
+3. Select SRT file and the video you want to sync it to
+4. Choose settings (encoding, auto sync options)
+5. Press "Auto Fill Times" and wait until complete
+
+### Batch Sync:
+1. Use folder browsers to select your subtitle and video folders
+2. Use **Ctrl+Click** or **Shift+Click** to select multiple files from each list
+3. Switch to the "Batch Sync" tab to preview file pairings
+4. Click "Start Batch Sync" and monitor progress
+
+### Settings & Tips:
+- **Encoding**: Try different encodings if you get errors (UTF-8 vs Latin-1)
+- **Language**: Choose the correct language for speech recognition
+- **Confidence**: Higher values (70%+) reduce false matches
+- **File Naming**: Use consistent patterns like `episode01.srt`/`episode01.mkv` for batch processing
+- **Output Files**: Single sync creates `_autosync.srt`, batch creates `_batch_autosync.srt`
 
 If you get an encoding error, try another encoding from the dropdown and press OK.
 You can also edit the generated times manually and press OK to resync.
